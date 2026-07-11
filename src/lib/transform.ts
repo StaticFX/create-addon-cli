@@ -11,25 +11,41 @@ const OLD_PKG_PATH = 'com/example/examplemod';
 // Files we rewrite the contents of (everything that can mention the mod).
 const TEXT_EXT = new Set(['.java', '.gradle', '.properties', '.json', '.md', '.toml']);
 
-const capitalize = (s) => (s.length > 1 ? s[0].toUpperCase() + s.slice(1) : s.toUpperCase());
+/** The identifiers a project is rebranded to. */
+export interface Names {
+  display: string;
+  pascal: string;
+  modId: string;
+  group: string;
+  mainClass: string;
+}
 
-export function slugify(name) {
+export interface DeriveInput {
+  name: string;
+  id?: string;
+  group?: string;
+}
+
+const capitalize = (s: string): string =>
+  s.length > 1 ? s[0].toUpperCase() + s.slice(1) : s.toUpperCase();
+
+export function slugify(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
 
 /** Derive every identifier the template needs from the user's answers. */
-export function deriveNames({ name, id, group }) {
+export function deriveNames({ name, id, group }: DeriveInput): Names {
   const display = name.trim();
   const pascal = display.split(/[^A-Za-z0-9]+/).filter(Boolean).map(capitalize).join('');
   if (!pascal) throw new Error(`"${display}" has no letters or digits to build a class name from.`);
-  const modId = (id?.trim() || display.toLowerCase().replace(/[^a-z0-9_]/g, ''));
+  const modId = id?.trim() || display.toLowerCase().replace(/[^a-z0-9_]/g, '');
   if (!modId) throw new Error(`Could not derive a mod id from "${display}"; pass one explicitly.`);
   const modGroup = group?.trim() || `com.example.${modId}`;
   return { display, pascal, modId, group: modGroup, mainClass: pascal };
 }
 
 /** Rewrite a file's text, most-specific token first (see the gradle task). */
-export function transformContent(s, n) {
+export function transformContent(s: string, n: Names): string {
   return s
     .split(OLD_GROUP).join(n.group)
     .split('ExampleMod').join(n.mainClass)
@@ -40,16 +56,16 @@ export function transformContent(s, n) {
 }
 
 /** Rewrite a file/dir name (class names + the mixin config id). */
-export function transformName(s, n) {
+export function transformName(s: string, n: Names): string {
   return s
     .split('ExampleMod').join(n.mainClass)
     .replace(/Example(?=[A-Z])/g, n.pascal)
     .split('examplemod').join(n.modId);
 }
 
-async function walk(dir) {
-  const out = [];
-  async function rec(d) {
+async function walk(dir: string): Promise<string[]> {
+  const out: string[] = [];
+  async function rec(d: string): Promise<void> {
     for (const entry of await fs.readdir(d, { withFileTypes: true })) {
       const p = path.join(d, entry.name);
       if (entry.isDirectory()) await rec(p);
@@ -60,18 +76,23 @@ async function walk(dir) {
   return out;
 }
 
-async function pathExists(p) {
-  try { await fs.access(p); return true; } catch { return false; }
+async function pathExists(p: string): Promise<boolean> {
+  try {
+    await fs.access(p);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
-async function removeIfEmpty(dir) {
+async function removeIfEmpty(dir: string): Promise<void> {
   if (!(await pathExists(dir))) return;
   const entries = await fs.readdir(dir);
   if (entries.length === 0) await fs.rmdir(dir);
 }
 
 /** Rebrand an already-populated project directory in place. */
-export async function applyRename({ targetDir, names }) {
+export async function applyRename({ targetDir, names }: { targetDir: string; names: Names }): Promise<Names> {
   // 1. Rewrite text file contents.
   for (const file of await walk(targetDir)) {
     if (!TEXT_EXT.has(path.extname(file))) continue;

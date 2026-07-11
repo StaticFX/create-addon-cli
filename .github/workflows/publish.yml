@@ -22,10 +22,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
 
       # Exercises the real flow: clones the default template from GitHub and rebrands it.
       - name: Scaffold a smoke-test project
-        run: node index.mjs /tmp/smoke --name "Smoke Mod" --group com.acme.smoke --no-git --yes
+        run: node dist/index.js /tmp/smoke --name "Smoke Mod" --group com.acme.smoke --no-git --yes
 
       - name: Assert the generated project is clean
         run: |
@@ -51,6 +54,7 @@ jobs:
         with:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
+      - run: npm ci
 
       - name: Skip if this version is already on npm
         id: check
@@ -65,6 +69,7 @@ jobs:
             echo "publish=true" >> "$GITHUB_OUTPUT"
           fi
 
+      # prepack runs `tsup`, so dist/ is freshly built before packing.
       - name: Publish to npm
         if: steps.check.outputs.publish == 'true'
         run: npm publish --provenance --access public

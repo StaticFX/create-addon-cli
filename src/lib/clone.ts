@@ -1,23 +1,28 @@
 // Fetches the template by shallow-cloning it with git (degit-style: no history is
-// kept). Zero runtime dependencies — just the user's `git`.
+// kept). The user just needs `git` on their PATH.
 
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import { spawn, type SpawnOptions } from 'node:child_process';
 
 export const DEFAULT_TEMPLATE = 'StaticFX/create-addon-template';
 
+export interface TemplateRef {
+  url: string;
+  ref?: string;
+}
+
 /** Turn a template spec into a clone URL + optional ref. */
-export function parseTemplate(spec) {
+export function parseTemplate(spec: string): TemplateRef {
   let s = spec;
-  let ref;
+  let ref: string | undefined;
   const hash = s.indexOf('#');
   if (hash !== -1) {
     ref = s.slice(hash + 1);
     s = s.slice(0, hash);
   }
-  let url;
+  let url: string;
   if (/^(https?:|git@|ssh:|file:)/.test(s) || s.startsWith('/') || s.startsWith('.')) {
     url = s; // full URL or local path
   } else if (/^[\w.-]+\/[\w.-]+$/.test(s)) {
@@ -28,7 +33,7 @@ export function parseTemplate(spec) {
   return { url, ref };
 }
 
-function run(cmd, args, opts = {}) {
+function run(cmd: string, args: string[], opts: SpawnOptions = {}): Promise<void> {
   return new Promise((resolve, reject) => {
     const p = spawn(cmd, args, { stdio: 'ignore', ...opts });
     p.on('error', reject);
@@ -37,7 +42,7 @@ function run(cmd, args, opts = {}) {
 }
 
 /** True if `git` is on PATH. */
-export async function hasGit() {
+export async function hasGit(): Promise<boolean> {
   try {
     await run('git', ['--version']);
     return true;
@@ -50,7 +55,9 @@ export async function hasGit() {
  * Shallow-clone `spec` into a temp dir, strip its .git, and copy the files into
  * targetDir. Returns { url, ref } for the caller's summary.
  */
-export async function fetchTemplate({ spec, targetDir }) {
+export async function fetchTemplate(
+  { spec, targetDir }: { spec: string; targetDir: string },
+): Promise<{ url: string; ref: string }> {
   const { url, ref } = parseTemplate(spec);
   const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'create-addon-'));
   const repoDir = path.join(tmp, 'repo');

@@ -1,0 +1,30 @@
+{
+  "name": "create-addon-cli",
+  "version": "0.1.0",
+  "description": "Scaffold a Create (Minecraft) mod addon — clones the template and rebrands it to your mod.",
+  "type": "module",
+  "bin": {
+    "create-addon-cli": "index.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "lib/"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "minecraft",
+    "create",
+    "createmod",
+    "neoforge",
+    "mod",
+    "template",
+    "scaffold"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/StaticFX/create-addon-cli.git"
+  }
+}

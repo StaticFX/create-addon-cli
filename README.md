@@ -9,13 +9,6 @@ npm create addon-cli@latest
 npx create-addon-cli my-mod
 ```
 
-It shallow-clones the
-[Create addon template](https://github.com/StaticFX/create-addon-template) (kinetic
-block, sequenced-assembly + fan-processing recipes, a Ponder plugin scaffold,
-datagen, CI) and rebrands every `Example` / `examplemod` reference to your own mod —
-package, classes, mixin config and all — so you start from a compiling project
-instead of a find-and-replace chore.
-
 ## Usage
 
 ```
@@ -53,7 +46,6 @@ cd sick-mod
 The tool clones the template with `git clone --depth 1` into a temp dir, strips the
 `.git`, copies the files into your target directory, and applies the rename rules in
 `src/lib/transform.ts` (which mirror the template's `gradle/rename-mod.gradle` task).
-No template is bundled in the package, so `npx` always gets the latest template.
 
 Point `--template` at a fork or a pinned ref (`owner/repo#v1.2.0`) to scaffold from
 something other than the default.
@@ -82,21 +74,35 @@ output (git-ignored, produced on `prepack`).
 
 ## Publishing
 
-CI does it — `.github/workflows/publish.yml` builds a smoke-test project (real clone
-+ rebrand), then publishes to npm.
+Releases go through `.github/workflows/publish.yml` using npm **Trusted Publishing**
+(OIDC) — no `NPM_TOKEN` secret to manage. The workflow authenticates to npm with a
+short-lived GitHub OIDC token (`id-token: write`) and provenance is attached
+automatically.
 
-One-time setup: create an npm **automation token** (npmjs.com → Access Tokens) and
-add it to the repo as a secret named `NPM_TOKEN` (Settings → Secrets and variables →
-Actions).
+One-time setup on npmjs.com → the package → **Settings → Trusted Publisher → GitHub
+Actions**:
 
-To cut a release:
+| Field | Value |
+| --- | --- |
+| Organization or user | `StaticFX` |
+| Repository | `create-addon-cli` |
+| Workflow filename | `publish.yml` |
+| Environment | *(leave blank)* |
+
+Because a trusted publisher is configured on an existing package, do the **first**
+publish once by hand, then every release after that is tokenless:
 
 ```bash
-# bump "version" in package.json, then:
+npm install && npm publish --access public   # first time only (creates the package)
+```
+
+To cut a release once trusted publishing is set up — bump `version` in
+`package.json`, then:
+
+```bash
 git tag v0.1.0
 git push origin v0.1.0
 ```
 
 The workflow skips automatically if that version is already on npm, so re-runs are
-safe. You can also trigger it manually from the Actions tab. To publish by hand:
-`npm login && npm publish`.
+safe.

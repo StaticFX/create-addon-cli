@@ -1,9 +1,12 @@
 name: Publish
 
-# Publishes create-addon-cli to npm. Trigger by pushing a tag like `v0.1.0`, or run
-# manually from the Actions tab. Requires a repo secret NPM_TOKEN (an npm automation
-# token with publish rights). The version published is whatever is in package.json —
-# bump it before tagging.
+# Publishes create-addon-cli to npm via Trusted Publishing (OIDC) — no NPM_TOKEN
+# secret needed. Configure the trusted publisher once on npmjs.com:
+#   package → Settings → Trusted Publisher → GitHub Actions
+#     Organization/user: StaticFX   Repository: create-addon-cli
+#     Workflow filename: publish.yml
+# Trigger by pushing a tag like `v0.1.0`, or run manually from the Actions tab.
+# The version published is whatever is in package.json — bump it before tagging.
 
 on:
   push:
@@ -47,13 +50,15 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
-      id-token: write # npm provenance
+      id-token: write # OIDC token for npm Trusted Publishing (also enables provenance)
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
+      # Trusted Publishing (OIDC) requires a recent npm CLI.
+      - run: npm install -g npm@latest
       - run: npm ci
 
       - name: Skip if this version is already on npm
@@ -69,9 +74,8 @@ jobs:
             echo "publish=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # prepack runs `tsup`, so dist/ is freshly built before packing.
+      # No NODE_AUTH_TOKEN: auth comes from the OIDC trusted publisher.
+      # prepack runs `tsup`, so dist/ is freshly built; provenance is automatic.
       - name: Publish to npm
         if: steps.check.outputs.publish == 'true'
-        run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public

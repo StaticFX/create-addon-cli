@@ -1,6 +1,6 @@
 {
   "name": "create-addon-cli",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Scaffold a Create (Minecraft) mod addon — clones the template and rebrands it to your mod.",
   "type": "module",
   "bin": {

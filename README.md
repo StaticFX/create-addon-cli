@@ -71,38 +71,3 @@ npm run build                      # bundle to dist/index.js
 
 Source lives in `src/` (`index.ts` + `lib/{ui,transform,clone}.ts`); `dist/` is built
 output (git-ignored, produced on `prepack`).
-
-## Publishing
-
-Releases go through `.github/workflows/publish.yml` using npm **Trusted Publishing**
-(OIDC) — no `NPM_TOKEN` secret to manage. The workflow authenticates to npm with a
-short-lived GitHub OIDC token (`id-token: write`) and provenance is attached
-automatically.
-
-One-time setup on npmjs.com → the package → **Settings → Trusted Publisher → GitHub
-Actions**:
-
-| Field | Value |
-| --- | --- |
-| Organization or user | `StaticFX` |
-| Repository | `create-addon-cli` |
-| Workflow filename | `publish.yml` |
-| Environment | *(leave blank)* |
-
-Because a trusted publisher is configured on an existing package, do the **first**
-publish once by hand, then every release after that is tokenless:
-
-```bash
-npm install && npm publish --access public   # first time only (creates the package)
-```
-
-To cut a release once trusted publishing is set up — bump `version` in
-`package.json`, then:
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
-The workflow skips automatically if that version is already on npm, so re-runs are
-safe.
